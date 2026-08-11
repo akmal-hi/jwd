@@ -405,6 +405,9 @@ $wa_message .= "%0A%0ATerima kasih.";
                 <div class="cart-total">
                     Total: <span id="cartTotal">Rp <?= number_format($total_price, 0, ',', '.') ?></span>
                 </div>
+                <a href="../checkout.php" class="btn-checkout" style="background: linear-gradient(135deg, #e8b830, #d4a020); color: #1f2462;">
+                    <i class="fas fa-shopping-cart"></i> Checkout Sekarang
+                </a>
                 <a href="https://wa.me/<?= $wa_default ?>?text=<?= rawurlencode($wa_message) ?>" class="btn-checkout" target="_blank">
                     <i class="fab fa-whatsapp"></i> Order via WhatsApp
                 </a>
