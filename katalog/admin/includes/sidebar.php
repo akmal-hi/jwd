@@ -58,7 +58,7 @@
             </a>
         </li>
         <li class="<?= ($active_dir == 'invoice') ? 'active' : '' ?>">
-            <a href="<?= $base_path ?>invoice/index.php">
+            <a href="<?= $base_path ?>invoice/invoice.php">
                 <i class="fas fa-file-invoice"></i>
                 <span>Invoice</span>
             </a>

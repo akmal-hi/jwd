@@ -12,7 +12,7 @@ require_login();
 // ============================================================
 
 function generate_invoice_number() {
-    return 'INV-LSP-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4));
+    return 'DKV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4));
 }
 
 function generate_invoice_link($length = 12) {
@@ -39,6 +39,7 @@ if ($stmt_prod) {
 $error = '';
 $success = '';
 $form_data = [];
+$invoice_id = 0;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
@@ -62,6 +63,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $due_date = $_POST['due_date'] ?? date('Y-m-d', strtotime('+30 days'));
     $notes = trim($_POST['notes'] ?? '');
     $status = $_POST['status'] ?? 'draft';
+    
+    // Action: save_draft atau checkout
+    $action = $_POST['action'] ?? 'save_draft';
     
     $form_data = [
         'product_id' => $product_id,
@@ -125,15 +129,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         
         if ($stmt_insert) {
-            // Perbaiki bind_param: 19 parameter = 19 tipe data
-            // String: 9 (invoice_number, client_name, client_email, client_phone, client_address, service_name, service_description, guide_content, schedule) = 9s
-            // Double: 3 (amount, tax, discount) = 3d
-            // Double: 1 (total) = 1d
-            // String: 4 (status, issue_date, due_date, notes) = 4s
-            // String: 1 (unique_link) = 1s
-            // Integer: 1 (product_id) = 1i
-            // Total: 9 + 3 + 1 + 4 + 1 + 1 = 19
-            
             mysqli_stmt_bind_param($stmt_insert, 
                 "sssssssssdddssssssi", 
                 $invoice_number, $client_name, $client_email, $client_phone, $client_address,
@@ -143,8 +138,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             );
             
             if (mysqli_stmt_execute($stmt_insert)) {
-                $success = 'Invoice berhasil dibuat!';
+                $invoice_id = mysqli_insert_id($conn);
                 mysqli_stmt_close($stmt_insert);
+                
+                // Jika checkout, redirect ke checkout.php
+                if ($action === 'checkout') {
+                    header("Location: checkout.php?id=" . $invoice_id);
+                    exit;
+                }
+                
+                // Jika save draft
+                $success = 'Invoice berhasil dibuat!';
                 $form_data = [];
                 header("refresh:2;url=index.php");
                 exit;
@@ -162,7 +166,7 @@ include '../includes/header.php';
 ?>
 
 <!-- ============================================================ -->
-<!-- CSS INLINE UNTUK MENGHINDARI DEPENDENSI -->
+<!-- CSS INLINE -->
 <!-- ============================================================ -->
 <style>
 .admin-content {
@@ -340,70 +344,7 @@ include '../includes/header.php';
     box-shadow: 0 0 0 3px rgba(232, 184, 48, 0.2);
 }
 
-.form-group input::placeholder,
-.form-group textarea::placeholder {
-    color: #9ca3af;
-}
-
-/* Input with Icon */
-.input-with-icon {
-    position: relative;
-}
-
-.input-with-icon .input-icon {
-    position: absolute;
-    left: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6b7280;
-    font-size: 0.85rem;
-    font-weight: 600;
-}
-
-.input-with-icon input {
-    padding-left: 2.5rem !important;
-}
-
-/* Template Buttons */
-.template-buttons {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.btn-template {
-    padding: 0.4rem 1rem;
-    background: rgba(232, 184, 48, 0.1);
-    color: #b8941f;
-    border: 1px solid rgba(232, 184, 48, 0.25);
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: all 0.3s ease;
-}
-
-.btn-template:hover {
-    background: rgba(232, 184, 48, 0.2);
-    border-color: #e8b830;
-}
-
-.btn-template-danger {
-    padding: 0.4rem 1rem;
-    background: rgba(220, 38, 38, 0.1);
-    color: #dc2626;
-    border: 1px solid rgba(220, 38, 38, 0.25);
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: all 0.3s ease;
-}
-
-.btn-template-danger:hover {
-    background: rgba(220, 38, 38, 0.2);
-    border-color: #dc2626;
-}
-
-/* Form Actions */
+/* Action Buttons */
 .form-actions {
     margin-top: 2rem;
     padding-top: 1.5rem;
@@ -411,6 +352,7 @@ include '../includes/header.php';
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
+    flex-wrap: wrap;
 }
 
 .btn-gold {
@@ -433,7 +375,26 @@ include '../includes/header.php';
     box-shadow: 0 4px 15px rgba(232, 184, 48, 0.4);
 }
 
-/* Alert Messages */
+.btn-checkout {
+    background: linear-gradient(135deg, #25D366, #128C7E);
+    color: #fff;
+    padding: 0.65rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-checkout:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+}
+
+/* Alert */
 .alert-success {
     background: rgba(34, 197, 94, 0.1);
     color: #16a34a;
@@ -441,9 +402,6 @@ include '../includes/header.php';
     border-radius: 8px;
     border-left: 4px solid #22c55e;
     margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
 }
 
 .alert-error {
@@ -453,14 +411,6 @@ include '../includes/header.php';
     border-radius: 8px;
     border-left: 4px solid #dc2626;
     margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.alert-error ul {
-    margin: 0;
-    padding-left: 1.5rem;
 }
 
 /* Responsive */
@@ -469,7 +419,6 @@ include '../includes/header.php';
         grid-template-columns: 1fr;
         gap: 1.5rem;
     }
-    
     .form-grid-4col {
         grid-template-columns: 1fr 1fr;
     }
@@ -479,30 +428,18 @@ include '../includes/header.php';
     .form-grid-4col {
         grid-template-columns: 1fr;
     }
-    
     .form-grid-2col-small {
         grid-template-columns: 1fr;
     }
-    
     .form-actions {
         flex-direction: column;
     }
-    
     .form-actions .btn-gold,
+    .form-actions .btn-checkout,
     .form-actions .btn-secondary-dark {
         width: 100%;
         justify-content: center;
     }
-    
-    .header-actions {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-}
-
-/* Dark mode untuk admin */
-body {
-    background: #f0f2f5;
 }
 </style>
 
@@ -512,7 +449,6 @@ body {
 
 <div class="admin-content">
 
-    <!-- ===== HEADER ACTIONS ===== -->
     <div class="header-actions">
         <div class="header-left">
             <h2 class="page-title-admin">
@@ -527,7 +463,6 @@ body {
         </div>
     </div>
 
-    <!-- ===== ALERT MESSAGES ===== -->
     <?php if ($error): ?>
         <div class="alert-error"><i class="fas fa-exclamation-circle"></i> <?= $error ?></div>
     <?php endif; ?>
@@ -535,7 +470,6 @@ body {
         <div class="alert-success"><i class="fas fa-check-circle"></i> <?= $success ?></div>
     <?php endif; ?>
 
-    <!-- ===== FORM INVOICE ===== -->
     <div class="form-card">
         <div class="form-header">
             <h3><i class="fas fa-plus-circle" style="color: #e8b830;"></i> Data Invoice</h3>
@@ -564,8 +498,8 @@ body {
                                placeholder="email@domain.com">
                     </div>
                     <div class="form-group">
-                        <label>Telepon</label>
-                        <input type="text" name="client_phone" 
+                        <label>Telepon <span class="required">*</span></label>
+                        <input type="text" name="client_phone" required
                                value="<?= htmlspecialchars($form_data['client_phone'] ?? '') ?>" 
                                placeholder="081234567890">
                     </div>
@@ -647,17 +581,17 @@ body {
                     <textarea name="guide_content" id="guideContent" rows="8" 
                               placeholder="Masukkan panduan penggunaan untuk klien..."><?= htmlspecialchars($form_data['guide_content'] ?? '') ?></textarea>
                 </div>
-                <div class="template-buttons">
-                    <button type="button" class="btn-template" onclick="insertTemplate1()">
+                <div class="template-buttons" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;">
+                    <button type="button" class="btn-template" onclick="insertTemplate1()" style="padding:0.4rem 1rem;background:rgba(232,184,48,0.1);color:#b8941f;border:1px solid rgba(232,184,48,0.25);border-radius:20px;cursor:pointer;font-size:0.8rem;">
                         <i class="fas fa-file-alt"></i> Template 1
                     </button>
-                    <button type="button" class="btn-template" onclick="insertTemplate2()">
+                    <button type="button" class="btn-template" onclick="insertTemplate2()" style="padding:0.4rem 1rem;background:rgba(232,184,48,0.1);color:#b8941f;border:1px solid rgba(232,184,48,0.25);border-radius:20px;cursor:pointer;font-size:0.8rem;">
                         <i class="fas fa-file-alt"></i> Template 2
                     </button>
-                    <button type="button" class="btn-template" onclick="insertTemplate3()">
+                    <button type="button" class="btn-template" onclick="insertTemplate3()" style="padding:0.4rem 1rem;background:rgba(232,184,48,0.1);color:#b8941f;border:1px solid rgba(232,184,48,0.25);border-radius:20px;cursor:pointer;font-size:0.8rem;">
                         <i class="fas fa-file-alt"></i> Template 3
                     </button>
-                    <button type="button" class="btn-template-danger" onclick="clearGuide()">
+                    <button type="button" class="btn-template-danger" onclick="clearGuide()" style="padding:0.4rem 1rem;background:rgba(220,38,38,0.1);color:#dc2626;border:1px solid rgba(220,38,38,0.25);border-radius:20px;cursor:pointer;font-size:0.8rem;">
                         <i class="fas fa-eraser"></i> Kosongkan
                     </button>
                 </div>
@@ -692,8 +626,11 @@ body {
 
             <!-- Form Actions -->
             <div class="form-actions">
-                <button type="submit" class="btn-gold">
-                    <i class="fas fa-save"></i> Simpan Invoice
+                <button type="submit" name="action" value="save_draft" class="btn-gold">
+                    <i class="fas fa-save"></i> Simpan Draft
+                </button>
+                <button type="submit" name="action" value="checkout" class="btn-checkout">
+                    <i class="fab fa-whatsapp"></i> Checkout & Kirim WA
                 </button>
                 <a href="index.php" class="btn-secondary-dark">
                     <i class="fas fa-times"></i> Batal

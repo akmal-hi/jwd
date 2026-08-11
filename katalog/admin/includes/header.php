@@ -1142,9 +1142,12 @@
 <body>
 <div class="admin-wrapper">
     <?php include 'sidebar.php'; ?>
+
+    
     
     <!-- Overlay untuk mobile -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
+    
     
     <div class="admin-main">
         <div class="top-bar">
@@ -1161,6 +1164,6 @@
                     <i class="fas fa-user-circle"></i>
                     <span><?= htmlspecialchars($_SESSION['admin_username'] ?? 'Admin') ?></span>
                 </div>
-                <a href="../logout.php" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a href="../../katalog/logout.php" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
         </div>

@@ -9,7 +9,7 @@ session_start();
 $host = 'localhost';
 $user = 'root';
 $pass = '';
-$db   = 'jwd';  // Ganti dengan nama database LSP COACHPRO
+$db   = 'jwd2';  // Ganti dengan nama database LSP COACHPRO
 
 // Koneksi Database
 $conn = mysqli_connect($host, $user, $pass, $db);

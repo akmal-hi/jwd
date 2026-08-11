@@ -17,5 +17,5 @@ if ($id > 0) {
     $_SESSION['error'] = 'ID invoice tidak valid!';
 }
 
-header('Location: index.php');
+header('Location: invoice.php');
 exit;
